@@ -336,3 +336,169 @@ ax6.set_title("EµTet2KO Malignant IGL Samples")
 plt.tight_layout()
 plt.savefig(FIGURES_DIR / "alpha_diversity_malignant.png", dpi=300, bbox_inches="tight")
 plt.close(fig)
+
+
+def make_alpha_dataframe():
+    rows = []
+
+    chain_palette = {
+        "IGH": "#1f77b4",  # blue
+        "IGK": "#2ca02c",  # green
+        "IGL": "#ff7f0e",  # orange
+    }
+
+    group_labels = {
+        "A": "Eµ\nPremalignant",
+        "C": "EµTet2KO\nPremalignant",
+        "D": "Eµ\nMalignant",
+        "F": "EµTet2KO\nMalignant"
+    }
+
+    groups = [
+        ("A", "IGH", A_IGH_labels, A_IGH_values),
+        ("C", "IGH", C_IGH_labels, C_IGH_values),
+        ("D", "IGH", D_IGH_labels, D_IGH_values),
+        ("F", "IGH", F_IGH_labels, F_IGH_values),
+
+        ("A", "IGK", A_IGK_labels, A_IGK_values),
+        ("C", "IGK", C_IGK_labels, C_IGK_values),
+        ("D", "IGK", D_IGK_labels, D_IGK_values),
+        ("F", "IGK", F_IGK_labels, F_IGK_values),
+
+        ("A", "IGL", A_IGL_labels, A_IGL_values),
+        ("C", "IGL", C_IGL_labels, C_IGL_values),
+        ("D", "IGL", D_IGL_labels, D_IGL_values),
+        ("F", "IGL", F_IGL_labels, F_IGL_values),
+    ]
+
+    print("labels: ", A_IGH_labels)
+
+    for group, chain, labels, values in groups:
+        for label, val in zip(labels, values):
+            rows.append({
+                "sample": label,
+                "group": group,
+                "group_label": group_labels[group],
+                "chain": chain,
+                "metric": val
+            })
+
+    return pd.DataFrame(rows)
+
+
+df_alpha = make_alpha_dataframe()
+df_alpha["x_label"] = df_alpha["group"] + "_"+ df_alpha["chain"] + " " + df_alpha["group_label"]
+
+
+chain_palette = {
+    "IGH": "#1f77b4",  # blue
+    "IGK": "#2ca02c",  # green
+    "IGL": "#ff7f0e",  # orange
+}
+
+
+df_alpha["igm_status"] = df_alpha["sample"].str.extract(r"_(IgM\+|IgM-|mixed)_")
+
+# # Plot as barplot
+# plt.figure(figsize=(18,8))
+# sns.barplot(
+#     x="x_label",
+#     y="metric",
+#     data=df_alpha,
+#     hue="chain",
+#     palette=chain_palette,
+#     ci="sd",
+#     capsize=0.1,
+#     dodge=False
+# )
+
+
+# Plot the boxplot instead of the barplot
+plt.figure(figsize=(18, 8))
+sns.boxplot(
+    x="x_label",
+    y="metric",
+    data=df_alpha,
+    hue="chain",
+    palette=chain_palette,
+    dodge=False,
+    showcaps=True,
+    # boxprops={'facecolor':'None'},  # Optional: transparent boxes
+    medianprops={'color':'black'}
+)
+
+
+# === Your stripplots ===
+sns.stripplot(
+    x="x_label",
+    y="metric",
+    data=df_alpha[df_alpha["igm_status"] == "IgM+"],
+    color="black",
+    jitter=True,
+    size=6,
+    dodge=False,
+    edgecolor="black",
+    linewidth=1,
+)
+
+sns.stripplot(
+    x="x_label",
+    y="metric",
+    data=df_alpha[df_alpha["igm_status"] == "IgM-"],
+    color="white",
+    jitter=True,
+    size=6,
+    dodge=False,
+    edgecolor="black",
+    linewidth=1,
+)
+
+sns.stripplot(
+    x="x_label",
+    y="metric",
+    data=df_alpha[df_alpha["igm_status"] == "mixed"],
+    color="grey",
+    jitter=True,
+    size=6,
+    dodge=False,
+    edgecolor="black",
+    linewidth=1,
+)
+
+# Chain legend handles
+chain_legend_handles = [
+    mpatches.Patch(color="#1f77b4", label="IGH"),
+    mpatches.Patch(color="#2ca02c", label="IGK"),
+    mpatches.Patch(color="#ff7f0e", label="IGL")
+]
+
+# IgM status dot handles (stripplot)
+igm_legend_handles = [
+    Line2D([0], [0], marker='o', color='black', label='IgM+', markerfacecolor='black', markersize=10),
+    Line2D([0], [0], marker='o', color='black', label='IgM-', markerfacecolor='white', markersize=10),
+    Line2D([0], [0], marker='o', color='black', label='IgM mixed', markerfacecolor='grey', markersize=10),
+]
+
+# Combine both legends
+all_handles = chain_legend_handles + igm_legend_handles
+
+# Add the full legend
+plt.legend(
+    handles=all_handles,
+    title="Legend",
+    bbox_to_anchor=(1.01, 1),
+    loc='upper left'
+)
+
+# === Plot decoration ===
+plt.title(f"{metric_to_plot} per Group and Chain")
+plt.ylabel(metric_to_plot)
+plt.xlabel("")
+plt.xticks(rotation=45, ha="right")
+
+# plt.yscale('log')
+
+
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / "alpha_diversity_combined.png", dpi=300, bbox_inches="tight")
+plt.close()
