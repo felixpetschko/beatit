@@ -502,3 +502,36 @@ plt.xticks(rotation=45, ha="right")
 plt.tight_layout()
 plt.savefig(FIGURES_DIR / "alpha_diversity_combined.png", dpi=300, bbox_inches="tight")
 plt.close()
+
+# === Malignant IGH only: IgM+ vs IgM- ===
+df_malignant_igh_status = df_alpha[
+    (df_alpha["group"].isin(["D", "F"])) &
+    (df_alpha["chain"] == "IGH") &
+    (df_alpha["igm_status"].isin(["IgM+", "IgM-"]))
+].copy()
+
+igm_pos = df_malignant_igh_status[df_malignant_igh_status["igm_status"] == "IgM+"]
+igm_neg = df_malignant_igh_status[df_malignant_igh_status["igm_status"] == "IgM-"]
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6), sharey=True)
+plot_alpha(ax1, igm_pos["sample"].tolist(), igm_pos["metric"].tolist(), metric_to_plot)
+plot_alpha(ax2, igm_neg["sample"].tolist(), igm_neg["metric"].tolist(), metric_to_plot)
+
+ax1.set_title("IgM+ Malignant IGH Samples")
+ax2.set_title("IgM- Malignant IGH Samples")
+
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / "alpha_diversity_malignant_IGH_IgM_split.png", dpi=300, bbox_inches="tight")
+plt.close(fig)
+
+# === Malignant IGH only: Eµ vs EµTet2KO (bar plot) ===
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6), sharey=True)
+plot_alpha(ax1, D_IGH_labels, D_IGH_values, metric_to_plot)
+plot_alpha(ax2, F_IGH_labels, F_IGH_values, metric_to_plot)
+
+ax1.set_title("Eµ Malignant IGH Samples")
+ax2.set_title("EµTet2KO Malignant IGH Samples")
+
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / "alpha_diversity_malignant_IGH_groups.png", dpi=300, bbox_inches="tight")
+plt.close(fig)
