@@ -299,7 +299,9 @@ ax5.set_title("Eµ Premalignant IGL Samples")
 ax6.set_title("EµTet2KO Premalignant IGL Samples")
 
 plt.tight_layout()
-plt.savefig("alpha_diversity_premalignant.png", dpi=300, bbox_inches="tight")
+FIGURES_DIR = Path("figures")
+FIGURES_DIR.mkdir(exist_ok=True)
+plt.savefig(FIGURES_DIR / "alpha_diversity_premalignant.png", dpi=300, bbox_inches="tight")
 plt.close(fig)
 
 # === Daten pro Gruppe und Kette ===
@@ -332,5 +334,5 @@ ax5.set_title("Eµ Malignant IGL Samples")
 ax6.set_title("EµTet2KO Malignant IGL Samples")
 
 plt.tight_layout()
-plt.savefig("alpha_diversity_malignant.png", dpi=300, bbox_inches="tight")
+plt.savefig(FIGURES_DIR / "alpha_diversity_malignant.png", dpi=300, bbox_inches="tight")
 plt.close(fig)
