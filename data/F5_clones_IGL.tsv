@@ -1,0 +1,2 @@
+cloneId	readCount	readFraction	targetSequences	targetQualities	allVHitsWithScore	allDHitsWithScore	allJHitsWithScore	allCHitsWithScore	allVAlignments	allDAlignments	allJAlignments	allCAlignments	nSeqCDR3	minQualCDR3	aaSeqCDR3	refPoints
+1	2.0	1.0	TGTGCTCTATGGTACAGCAACCATTTTATTTTC	[[[[[P[[[[[[[[[[[[[[[[[[[[[[[[[[[	IGLV1*00(1099)		IGLJ3*00(185)	IGLC3*00(66)	344|369|391|0|25||260.0		22|30|58|25|33||90.0		TGTGCTCTATGGTACAGCAACCATTTTATTTTC	47	CALWYSNHFIF	:::::::::0:-2:25:::::25:-2:33:::
