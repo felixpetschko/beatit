@@ -3,6 +3,7 @@ import numpy as np
 from scipy.stats import entropy
 from pathlib import Path
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 DATA_DIR = Path("data")
 FIGURES_DIR = Path("figures")
@@ -227,7 +228,7 @@ metric_keys = [
 metric_to_plot = metric_keys[14]
 
 
-def make_alpha_dataframe():
+def make_alpha_dataframe(metric_name):
     group_labels = {
         "A": "Eµ Premalignant",
         "C": "EµTet2KO Premalignant",
@@ -237,7 +238,7 @@ def make_alpha_dataframe():
 
     rows = []
     for file_path, sample_name in samples:
-        _, metric_val = get_alpha_metric_from_file(file_path, sample_name, metric_to_plot)
+        _, metric_val = get_alpha_metric_from_file(file_path, sample_name, metric_name)
         group = sample_name[0]
         chain = sample_name.split("_")[-1]
         rows.append(
@@ -252,85 +253,107 @@ def make_alpha_dataframe():
 
     df = pd.DataFrame(rows)
     df["igm_status"] = df["sample"].str.extract(r"_(IgM\+|IgM-|mixed)_")
-    df["group_chain"] = df["group_label"] + " " + df["chain"]
     return df
 
 
-def add_grouping_traces(fig, df, column, order=None):
-    trace_indices = []
-    categories = order or sorted(df[column].dropna().unique())
-    for category in categories:
-        subset = df[df[column] == category]
-        if subset.empty:
-            continue
-        fig.add_trace(
-            go.Box(
-                y=subset["metric"],
-                name=str(category),
-                boxpoints="all",
-                jitter=0.35,
-                pointpos=0,
-                marker=dict(size=6, line=dict(width=1, color="black")),
-                line=dict(width=1),
-                showlegend=False,
-            )
-        )
-        trace_indices.append(len(fig.data) - 1)
-    return trace_indices
+def build_metric_dataframe():
+    frames = []
+    for metric_name in metric_keys:
+        df_metric = make_alpha_dataframe(metric_name)
+        df_metric["metric_name"] = metric_name
+        frames.append(df_metric)
+    return pd.concat(frames, ignore_index=True)
 
 
-df_alpha = make_alpha_dataframe()
+def filter_malignant_igh(df):
+    return df[
+        (df["group"].isin(["D", "F"])) &
+        (df["chain"] == "IGH") &
+        (df["igm_status"].isin(["IgM+", "IgM-"]))
+    ].copy()
 
-group_label_order = [
-    "Eµ Premalignant",
-    "EµTet2KO Premalignant",
-    "Eµ Malignant",
-    "EµTet2KO Malignant",
-]
 
-igm_order = ["IgM+", "IgM-", "mixed"]
-chain_order = ["IGH", "IGK", "IGL"]
+def get_panel_data(df_metric):
+    igm_pos = df_metric[df_metric["igm_status"] == "IgM+"]
+    igm_neg = df_metric[df_metric["igm_status"] == "IgM-"]
+    eu = df_metric[df_metric["group"] == "D"]
+    eutet2 = df_metric[df_metric["group"] == "F"]
+    return igm_pos, igm_neg, eu, eutet2
 
-fig = go.Figure()
-trace_groups = {}
-trace_groups["Group"] = add_grouping_traces(fig, df_alpha, "group_label", group_label_order)
-trace_groups["IgM status"] = add_grouping_traces(fig, df_alpha, "igm_status", igm_order)
-trace_groups["Chain"] = add_grouping_traces(fig, df_alpha, "chain", chain_order)
-trace_groups["Group + Chain"] = add_grouping_traces(fig, df_alpha, "group_chain")
+
+df_all = build_metric_dataframe()
+df_default = filter_malignant_igh(df_all[df_all["metric_name"] == metric_to_plot])
+igm_pos, igm_neg, eu, eutet2 = get_panel_data(df_default)
+
+fig = make_subplots(
+    rows=2,
+    cols=2,
+    subplot_titles=(
+        "IgM+ Malignant IGH Samples",
+        "IgM- Malignant IGH Samples",
+        "Eµ Malignant IGH Samples",
+        "EµTet2KO Malignant IGH Samples",
+    ),
+)
+
+fig.add_trace(
+    go.Bar(x=igm_pos["sample"], y=igm_pos["metric"], name="IgM+"),
+    row=1,
+    col=1,
+)
+fig.add_trace(
+    go.Bar(x=igm_neg["sample"], y=igm_neg["metric"], name="IgM-"),
+    row=1,
+    col=2,
+)
+fig.add_trace(
+    go.Bar(x=eu["sample"], y=eu["metric"], name="Eµ"),
+    row=2,
+    col=1,
+)
+fig.add_trace(
+    go.Bar(x=eutet2["sample"], y=eutet2["metric"], name="EµTet2KO"),
+    row=2,
+    col=2,
+)
+
+fig.update_layout(
+    title=f"{metric_to_plot} (Malignant IGH)",
+    showlegend=False,
+    height=700,
+    margin=dict(l=60, r=40, t=80, b=60),
+)
+fig.update_xaxes(tickangle=45)
 
 buttons = []
-all_traces = len(fig.data)
-for name, indices in trace_groups.items():
-    visibility = [False] * all_traces
-    for idx in indices:
-        visibility[idx] = True
+for metric_name in metric_keys:
+    df_metric = filter_malignant_igh(df_all[df_all["metric_name"] == metric_name])
+    igm_pos, igm_neg, eu, eutet2 = get_panel_data(df_metric)
     buttons.append(
         dict(
-            label=name,
+            label=metric_name,
             method="update",
             args=[
-                {"visible": visibility},
                 {
-                    "title": f"{metric_to_plot} grouped by {name}",
-                    "xaxis": {"title": name},
-                    "yaxis": {"title": metric_to_plot},
+                    "y": [
+                        igm_pos["metric"],
+                        igm_neg["metric"],
+                        eu["metric"],
+                        eutet2["metric"],
+                    ],
+                    "x": [
+                        igm_pos["sample"],
+                        igm_neg["sample"],
+                        eu["sample"],
+                        eutet2["sample"],
+                    ],
                 },
+                {"title": f"{metric_name} (Malignant IGH)"},
             ],
         )
     )
 
-default_group = "Group"
-default_visibility = [False] * all_traces
-for idx in trace_groups[default_group]:
-    default_visibility[idx] = True
-for i, trace in enumerate(fig.data):
-    trace.visible = default_visibility[i]
-
 fig.update_layout(
-    title=f"{metric_to_plot} grouped by {default_group}",
-    xaxis_title=default_group,
-    yaxis_title=metric_to_plot,
-    boxmode="group",
     updatemenus=[
         dict(
             buttons=buttons,
@@ -340,8 +363,7 @@ fig.update_layout(
             xanchor="left",
             yanchor="top",
         )
-    ],
-    margin=dict(l=60, r=200, t=60, b=60),
+    ]
 )
 
 output_path = FIGURES_DIR / "alpha_diversity_interactive.html"
