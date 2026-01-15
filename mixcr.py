@@ -299,7 +299,8 @@ ax5.set_title("Eµ Premalignant IGL Samples")
 ax6.set_title("EµTet2KO Premalignant IGL Samples")
 
 plt.tight_layout()
-plt.show()
+plt.savefig("alpha_diversity_premalignant.png", dpi=300, bbox_inches="tight")
+plt.close(fig)
 
 # === Daten pro Gruppe und Kette ===
 D_IGH_labels, D_IGH_values = filter_alpha_diversity(samples, metric_to_plot, start_text="D", end_text="_IGH")
@@ -331,4 +332,5 @@ ax5.set_title("Eµ Malignant IGL Samples")
 ax6.set_title("EµTet2KO Malignant IGL Samples")
 
 plt.tight_layout()
-plt.show()
+plt.savefig("alpha_diversity_malignant.png", dpi=300, bbox_inches="tight")
+plt.close(fig)
