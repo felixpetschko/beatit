@@ -267,10 +267,10 @@ def build_metric_dataframe():
     return pd.concat(frames, ignore_index=True)
 
 
-def filter_malignant_igh(df):
+def filter_malignant_chain(df, chain_name):
     return df[
         (df["group"].isin(["D", "F"])) &
-        (df["chain"] == "IGH") &
+        (df["chain"] == chain_name) &
         (df["igm_status"].isin(["IgM+", "IgM-"]))
     ].copy()
 
@@ -296,7 +296,8 @@ def get_shared_ylim(panels):
 
 
 df_all = build_metric_dataframe()
-df_default = filter_malignant_igh(df_all[df_all["metric_name"] == metric_to_plot])
+default_chain = "IGH"
+df_default = filter_malignant_chain(df_all[df_all["metric_name"] == metric_to_plot], default_chain)
 igm_pos, igm_neg, eu, eutet2 = get_panel_data(df_default)
 igm_colors = {"IgM+": "#1f77b4", "IgM-": "#ff7f0e"}
 shared_ylim = get_shared_ylim([igm_pos, igm_neg, eu, eutet2])
@@ -375,52 +376,72 @@ fig.update_xaxes(categoryorder="array", categoryarray=eutet2_samples, row=2, col
 
 metric_payload = {}
 for metric_name in metric_keys:
-    df_metric = filter_malignant_igh(df_all[df_all["metric_name"] == metric_name])
-    igm_pos, igm_neg, eu, eutet2 = get_panel_data(df_metric)
-    shared_ylim = get_shared_ylim([igm_pos, igm_neg, eu, eutet2])
-    metric_payload[metric_name] = {
-        "y": [
-            igm_pos["metric"].tolist(),
-            igm_neg["metric"].tolist(),
-            eu["metric"].tolist(),
-            eutet2["metric"].tolist(),
-        ],
-        "ylim": shared_ylim,
-    }
+    metric_payload[metric_name] = {}
+    for chain_name in ["IGH", "IGK", "IGL"]:
+        df_metric = filter_malignant_chain(df_all[df_all["metric_name"] == metric_name], chain_name)
+        igm_pos, igm_neg, eu, eutet2 = get_panel_data(df_metric)
+        shared_ylim = get_shared_ylim([igm_pos, igm_neg, eu, eutet2])
+        metric_payload[metric_name][chain_name] = {
+            "x": [
+                igm_pos["sample"].tolist(),
+                igm_neg["sample"].tolist(),
+                eu["sample"].tolist(),
+                eutet2["sample"].tolist(),
+            ],
+            "y": [
+                igm_pos["metric"].tolist(),
+                igm_neg["metric"].tolist(),
+                eu["metric"].tolist(),
+                eutet2["metric"].tolist(),
+            ],
+            "ylim": shared_ylim,
+        }
 
 post_script = f"""
 var plot = document.getElementById('mixcr-plot');
-var wrapper = document.createElement('label');
-wrapper.style.fontFamily = 'sans-serif';
-wrapper.style.fontSize = '14px';
-wrapper.style.display = 'flex';
-wrapper.style.flexDirection = 'column';
-wrapper.style.gap = '4px';
-wrapper.style.margin = '8px 0 12px 0';
+var controls = document.createElement('div');
+controls.style.display = 'flex';
+controls.style.gap = '12px';
+controls.style.alignItems = 'center';
+controls.style.margin = '8px 0 12px 0';
 
-var label = document.createElement('span');
-label.textContent = 'Metric';
-var select = document.createElement('select');
+function addSelect(labelText, options, defaultValue) {{
+  var wrapper = document.createElement('label');
+  wrapper.style.fontFamily = 'sans-serif';
+  wrapper.style.fontSize = '14px';
+  wrapper.style.display = 'flex';
+  wrapper.style.flexDirection = 'column';
+  wrapper.style.gap = '4px';
+  var label = document.createElement('span');
+  label.textContent = labelText;
+  var select = document.createElement('select');
+  options.forEach(function(opt) {{
+    var option = document.createElement('option');
+    option.value = opt;
+    option.text = opt;
+    if (opt === defaultValue) option.selected = true;
+    select.appendChild(option);
+  }});
+  wrapper.appendChild(label);
+  wrapper.appendChild(select);
+  controls.appendChild(wrapper);
+  return select;
+}}
+
 var metricOptions = {json.dumps(metric_keys)};
-metricOptions.forEach(function(opt) {{
-  var option = document.createElement('option');
-  option.value = opt;
-  option.text = opt;
-  if (opt === {json.dumps(metric_to_plot)}) option.selected = true;
-  select.appendChild(option);
-}});
-
-wrapper.appendChild(label);
-wrapper.appendChild(select);
-plot.parentNode.insertBefore(wrapper, plot);
+var chainOptions = {json.dumps(["IGH", "IGK", "IGL"])};
+var metricSelect = addSelect('Metric', metricOptions, {json.dumps(metric_to_plot)});
+var chainSelect = addSelect('Chain', chainOptions, {json.dumps(default_chain)});
+plot.parentNode.insertBefore(controls, plot);
 
 var metricData = {json.dumps(metric_payload)};
-select.addEventListener('change', function(e) {{
-  var metric = e.target.value;
-  var payload = metricData[metric];
-  Plotly.restyle(plot, {{y: payload.y}});
+function updatePlot() {{
+  var metric = metricSelect.value;
+  var chain = chainSelect.value;
+  var payload = metricData[metric][chain];
+  Plotly.restyle(plot, {{x: payload.x, y: payload.y}});
   Plotly.relayout(plot, {{
-    title: metric + ' (Malignant IGH)',
+    title: metric + ' (Malignant ' + chain + ')',
     'yaxis.range': payload.ylim,
     'yaxis.autorange': false,
     'yaxis2.range': payload.ylim,
@@ -428,9 +449,16 @@ select.addEventListener('change', function(e) {{
     'yaxis3.range': payload.ylim,
     'yaxis3.autorange': false,
     'yaxis4.range': payload.ylim,
-    'yaxis4.autorange': false
+    'yaxis4.autorange': false,
+    'xaxis.categoryarray': payload.x[0],
+    'xaxis2.categoryarray': payload.x[1],
+    'xaxis3.categoryarray': payload.x[2],
+    'xaxis4.categoryarray': payload.x[3]
   }});
-}});
+}}
+
+metricSelect.addEventListener('change', updatePlot);
+chainSelect.addEventListener('change', updatePlot);
 """
 
 output_path = FIGURES_DIR / "alpha_diversity_interactive.html"
