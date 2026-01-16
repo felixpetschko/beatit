@@ -424,5 +424,9 @@ fig.update_layout(
 )
 
 output_path = FIGURES_DIR / "alpha_diversity_interactive.html"
+docs_path = Path("docs") / "index.html"
+docs_path.parent.mkdir(exist_ok=True)
 fig.write_html(output_path)
+fig.write_html(docs_path)
 print(f"Wrote {output_path}")
+print(f"Wrote {docs_path}")
