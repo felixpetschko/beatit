@@ -4,6 +4,8 @@ from scipy.stats import entropy
 from pathlib import Path
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import plotly.io as pio
+import json
 
 DATA_DIR = Path("data")
 FIGURES_DIR = Path("figures")
@@ -371,62 +373,84 @@ fig.update_xaxes(categoryorder="array", categoryarray=igm_neg_samples, row=1, co
 fig.update_xaxes(categoryorder="array", categoryarray=eu_samples, row=2, col=1)
 fig.update_xaxes(categoryorder="array", categoryarray=eutet2_samples, row=2, col=2)
 
-buttons = []
+metric_payload = {}
 for metric_name in metric_keys:
     df_metric = filter_malignant_igh(df_all[df_all["metric_name"] == metric_name])
     igm_pos, igm_neg, eu, eutet2 = get_panel_data(df_metric)
     shared_ylim = get_shared_ylim([igm_pos, igm_neg, eu, eutet2])
-    buttons.append(
-        dict(
-            label=metric_name,
-            method="update",
-            args=[
-                {
-                    "y": [
-                        igm_pos["metric"],
-                        igm_neg["metric"],
-                        eu["metric"],
-                        eutet2["metric"],
-                    ],
-                    "marker": [
-                        {"color": igm_colors["IgM+"]},
-                        {"color": igm_colors["IgM-"]},
-                        {"color": eu["igm_status"].map(igm_colors)},
-                        {"color": eutet2["igm_status"].map(igm_colors)},
-                    ],
-                },
-                {
-                    "title": f"{metric_name} (Malignant IGH)",
-                    "yaxis.range": shared_ylim,
-                    "yaxis.autorange": False,
-                    "yaxis2.range": shared_ylim,
-                    "yaxis2.autorange": False,
-                    "yaxis3.range": shared_ylim,
-                    "yaxis3.autorange": False,
-                    "yaxis4.range": shared_ylim,
-                    "yaxis4.autorange": False,
-                },
-            ],
-        )
-    )
+    metric_payload[metric_name] = {
+        "y": [
+            igm_pos["metric"].tolist(),
+            igm_neg["metric"].tolist(),
+            eu["metric"].tolist(),
+            eutet2["metric"].tolist(),
+        ],
+        "ylim": shared_ylim,
+    }
 
-fig.update_layout(
-    updatemenus=[
-        dict(
-            buttons=buttons,
-            direction="down",
-            x=1.02,
-            y=1,
-            xanchor="left",
-            yanchor="top",
-        )
-    ]
-)
+post_script = f"""
+var plot = document.getElementById('mixcr-plot');
+var wrapper = document.createElement('label');
+wrapper.style.fontFamily = 'sans-serif';
+wrapper.style.fontSize = '14px';
+wrapper.style.display = 'flex';
+wrapper.style.flexDirection = 'column';
+wrapper.style.gap = '4px';
+wrapper.style.margin = '8px 0 12px 0';
+
+var label = document.createElement('span');
+label.textContent = 'Metric';
+var select = document.createElement('select');
+var metricOptions = {json.dumps(metric_keys)};
+metricOptions.forEach(function(opt) {{
+  var option = document.createElement('option');
+  option.value = opt;
+  option.text = opt;
+  if (opt === {json.dumps(metric_to_plot)}) option.selected = true;
+  select.appendChild(option);
+}});
+
+wrapper.appendChild(label);
+wrapper.appendChild(select);
+plot.parentNode.insertBefore(wrapper, plot);
+
+var metricData = {json.dumps(metric_payload)};
+select.addEventListener('change', function(e) {{
+  var metric = e.target.value;
+  var payload = metricData[metric];
+  Plotly.restyle(plot, {{y: payload.y}});
+  Plotly.relayout(plot, {{
+    title: metric + ' (Malignant IGH)',
+    'yaxis.range': payload.ylim,
+    'yaxis.autorange': false,
+    'yaxis2.range': payload.ylim,
+    'yaxis2.autorange': false,
+    'yaxis3.range': payload.ylim,
+    'yaxis3.autorange': false,
+    'yaxis4.range': payload.ylim,
+    'yaxis4.autorange': false
+  }});
+}});
+"""
 
 output_path = FIGURES_DIR / "alpha_diversity_interactive.html"
 docs_path = Path("docs") / "index.html"
 docs_path.parent.mkdir(exist_ok=True)
-fig.write_html(output_path)
-fig.write_html(docs_path)
+pio.write_html(
+    fig,
+    output_path,
+    full_html=True,
+    include_plotlyjs="cdn",
+    div_id="mixcr-plot",
+    post_script=post_script,
+)
+pio.write_html(
+    fig,
+    docs_path,
+    full_html=True,
+    include_plotlyjs="cdn",
+    div_id="mixcr-plot",
+    post_script=post_script,
+)
 print(f"Wrote {output_path}")
 print(f"Wrote {docs_path}")
