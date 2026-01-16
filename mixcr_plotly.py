@@ -281,10 +281,27 @@ def get_panel_data(df_metric):
     return igm_pos, igm_neg, eu, eutet2
 
 
+def get_panel_ylim(values):
+    max_val = values.max()
+    if pd.isna(max_val):
+        return [0, 1]
+    return [0, float(max_val) * 1.05]
+
+
+def get_shared_ylim(panels):
+    combined = pd.concat([p["metric"] for p in panels], ignore_index=True)
+    return get_panel_ylim(combined)
+
+
 df_all = build_metric_dataframe()
 df_default = filter_malignant_igh(df_all[df_all["metric_name"] == metric_to_plot])
 igm_pos, igm_neg, eu, eutet2 = get_panel_data(df_default)
 igm_colors = {"IgM+": "#1f77b4", "IgM-": "#ff7f0e"}
+shared_ylim = get_shared_ylim([igm_pos, igm_neg, eu, eutet2])
+igm_pos_samples = igm_pos["sample"].tolist()
+igm_neg_samples = igm_neg["sample"].tolist()
+eu_samples = eu["sample"].tolist()
+eutet2_samples = eutet2["sample"].tolist()
 
 fig = make_subplots(
     rows=2,
@@ -299,7 +316,7 @@ fig = make_subplots(
 
 fig.add_trace(
     go.Bar(
-        x=igm_pos["sample"],
+        x=igm_pos_samples,
         y=igm_pos["metric"],
         name="IgM+",
         marker_color=igm_colors["IgM+"],
@@ -309,7 +326,7 @@ fig.add_trace(
 )
 fig.add_trace(
     go.Bar(
-        x=igm_neg["sample"],
+        x=igm_neg_samples,
         y=igm_neg["metric"],
         name="IgM-",
         marker_color=igm_colors["IgM-"],
@@ -319,7 +336,7 @@ fig.add_trace(
 )
 fig.add_trace(
     go.Bar(
-        x=eu["sample"],
+        x=eu_samples,
         y=eu["metric"],
         name="Eµ",
         marker_color=eu["igm_status"].map(igm_colors),
@@ -329,7 +346,7 @@ fig.add_trace(
 )
 fig.add_trace(
     go.Bar(
-        x=eutet2["sample"],
+        x=eutet2_samples,
         y=eutet2["metric"],
         name="EµTet2KO",
         marker_color=eutet2["igm_status"].map(igm_colors),
@@ -342,14 +359,23 @@ fig.update_layout(
     title=f"{metric_to_plot} (Malignant IGH)",
     showlegend=False,
     height=700,
+    yaxis=dict(range=shared_ylim, autorange=False),
+    yaxis2=dict(range=shared_ylim, autorange=False),
+    yaxis3=dict(range=shared_ylim, autorange=False),
+    yaxis4=dict(range=shared_ylim, autorange=False),
     margin=dict(l=60, r=40, t=80, b=60),
 )
 fig.update_xaxes(tickangle=45)
+fig.update_xaxes(categoryorder="array", categoryarray=igm_pos_samples, row=1, col=1)
+fig.update_xaxes(categoryorder="array", categoryarray=igm_neg_samples, row=1, col=2)
+fig.update_xaxes(categoryorder="array", categoryarray=eu_samples, row=2, col=1)
+fig.update_xaxes(categoryorder="array", categoryarray=eutet2_samples, row=2, col=2)
 
 buttons = []
 for metric_name in metric_keys:
     df_metric = filter_malignant_igh(df_all[df_all["metric_name"] == metric_name])
     igm_pos, igm_neg, eu, eutet2 = get_panel_data(df_metric)
+    shared_ylim = get_shared_ylim([igm_pos, igm_neg, eu, eutet2])
     buttons.append(
         dict(
             label=metric_name,
@@ -362,12 +388,6 @@ for metric_name in metric_keys:
                         eu["metric"],
                         eutet2["metric"],
                     ],
-                    "x": [
-                        igm_pos["sample"],
-                        igm_neg["sample"],
-                        eu["sample"],
-                        eutet2["sample"],
-                    ],
                     "marker": [
                         {"color": igm_colors["IgM+"]},
                         {"color": igm_colors["IgM-"]},
@@ -375,7 +395,17 @@ for metric_name in metric_keys:
                         {"color": eutet2["igm_status"].map(igm_colors)},
                     ],
                 },
-                {"title": f"{metric_name} (Malignant IGH)"},
+                {
+                    "title": f"{metric_name} (Malignant IGH)",
+                    "yaxis.range": shared_ylim,
+                    "yaxis.autorange": False,
+                    "yaxis2.range": shared_ylim,
+                    "yaxis2.autorange": False,
+                    "yaxis3.range": shared_ylim,
+                    "yaxis3.autorange": False,
+                    "yaxis4.range": shared_ylim,
+                    "yaxis4.autorange": False,
+                },
             ],
         )
     )
