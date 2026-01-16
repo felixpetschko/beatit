@@ -284,6 +284,7 @@ def get_panel_data(df_metric):
 df_all = build_metric_dataframe()
 df_default = filter_malignant_igh(df_all[df_all["metric_name"] == metric_to_plot])
 igm_pos, igm_neg, eu, eutet2 = get_panel_data(df_default)
+igm_colors = {"IgM+": "#1f77b4", "IgM-": "#ff7f0e"}
 
 fig = make_subplots(
     rows=2,
@@ -297,22 +298,42 @@ fig = make_subplots(
 )
 
 fig.add_trace(
-    go.Bar(x=igm_pos["sample"], y=igm_pos["metric"], name="IgM+"),
+    go.Bar(
+        x=igm_pos["sample"],
+        y=igm_pos["metric"],
+        name="IgM+",
+        marker_color=igm_colors["IgM+"],
+    ),
     row=1,
     col=1,
 )
 fig.add_trace(
-    go.Bar(x=igm_neg["sample"], y=igm_neg["metric"], name="IgM-"),
+    go.Bar(
+        x=igm_neg["sample"],
+        y=igm_neg["metric"],
+        name="IgM-",
+        marker_color=igm_colors["IgM-"],
+    ),
     row=1,
     col=2,
 )
 fig.add_trace(
-    go.Bar(x=eu["sample"], y=eu["metric"], name="Eµ"),
+    go.Bar(
+        x=eu["sample"],
+        y=eu["metric"],
+        name="Eµ",
+        marker_color=eu["igm_status"].map(igm_colors),
+    ),
     row=2,
     col=1,
 )
 fig.add_trace(
-    go.Bar(x=eutet2["sample"], y=eutet2["metric"], name="EµTet2KO"),
+    go.Bar(
+        x=eutet2["sample"],
+        y=eutet2["metric"],
+        name="EµTet2KO",
+        marker_color=eutet2["igm_status"].map(igm_colors),
+    ),
     row=2,
     col=2,
 )
@@ -346,6 +367,12 @@ for metric_name in metric_keys:
                         igm_neg["sample"],
                         eu["sample"],
                         eutet2["sample"],
+                    ],
+                    "marker": [
+                        {"color": igm_colors["IgM+"]},
+                        {"color": igm_colors["IgM-"]},
+                        {"color": eu["igm_status"].map(igm_colors)},
+                        {"color": eutet2["igm_status"].map(igm_colors)},
                     ],
                 },
                 {"title": f"{metric_name} (Malignant IGH)"},
