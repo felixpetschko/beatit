@@ -267,19 +267,23 @@ def build_metric_dataframe():
     return pd.concat(frames, ignore_index=True)
 
 
-def filter_malignant_chain(df, chain_name):
+def filter_stage_chain(df, chain_name, stage):
+    if stage == "Malignant":
+        groups = ["D", "F"]
+    else:
+        groups = ["A", "C"]
     return df[
-        (df["group"].isin(["D", "F"])) &
+        (df["group"].isin(groups)) &
         (df["chain"] == chain_name) &
         (df["igm_status"].isin(["IgM+", "IgM-"]))
     ].copy()
 
 
-def get_panel_data(df_metric):
+def get_panel_data(df_metric, eu_group, ko_group):
     igm_pos = df_metric[df_metric["igm_status"] == "IgM+"]
     igm_neg = df_metric[df_metric["igm_status"] == "IgM-"]
-    eu = df_metric[df_metric["group"] == "D"]
-    eutet2 = df_metric[df_metric["group"] == "F"]
+    eu = df_metric[df_metric["group"] == eu_group]
+    eutet2 = df_metric[df_metric["group"] == ko_group]
     return igm_pos, igm_neg, eu, eutet2
 
 
@@ -297,8 +301,11 @@ def get_shared_ylim(panels):
 
 df_all = build_metric_dataframe()
 default_chain = "IGH"
-df_default = filter_malignant_chain(df_all[df_all["metric_name"] == metric_to_plot], default_chain)
-igm_pos, igm_neg, eu, eutet2 = get_panel_data(df_default)
+default_stage = "Malignant"
+df_default = filter_stage_chain(df_all[df_all["metric_name"] == metric_to_plot], default_chain, default_stage)
+default_eu_group = "D" if default_stage == "Malignant" else "A"
+default_ko_group = "F" if default_stage == "Malignant" else "C"
+igm_pos, igm_neg, eu, eutet2 = get_panel_data(df_default, default_eu_group, default_ko_group)
 igm_colors = {"IgM+": "#1f77b4", "IgM-": "#ff7f0e"}
 shared_ylim = get_shared_ylim([igm_pos, igm_neg, eu, eutet2])
 igm_pos_samples = igm_pos["sample"].tolist()
@@ -310,10 +317,10 @@ fig = make_subplots(
     rows=2,
     cols=2,
     subplot_titles=(
-        "IgM+ Malignant IGH Samples",
-        "IgM- Malignant IGH Samples",
-        "Eµ Malignant IGH Samples",
-        "EµTet2KO Malignant IGH Samples",
+        "IgM+ Samples",
+        "IgM- Samples",
+        "Eµ Samples",
+        "EµTet2KO Samples",
     ),
 )
 
@@ -359,7 +366,6 @@ fig.add_trace(
 )
 
 fig.update_layout(
-    title=f"{metric_to_plot} (Malignant IGH)",
     showlegend=False,
     height=700,
     yaxis=dict(range=shared_ylim, autorange=False),
@@ -378,24 +384,38 @@ metric_payload = {}
 for metric_name in metric_keys:
     metric_payload[metric_name] = {}
     for chain_name in ["IGH", "IGK", "IGL"]:
-        df_metric = filter_malignant_chain(df_all[df_all["metric_name"] == metric_name], chain_name)
-        igm_pos, igm_neg, eu, eutet2 = get_panel_data(df_metric)
-        shared_ylim = get_shared_ylim([igm_pos, igm_neg, eu, eutet2])
-        metric_payload[metric_name][chain_name] = {
-            "x": [
-                igm_pos["sample"].tolist(),
-                igm_neg["sample"].tolist(),
-                eu["sample"].tolist(),
-                eutet2["sample"].tolist(),
-            ],
-            "y": [
-                igm_pos["metric"].tolist(),
-                igm_neg["metric"].tolist(),
-                eu["metric"].tolist(),
-                eutet2["metric"].tolist(),
-            ],
-            "ylim": shared_ylim,
-        }
+        metric_payload[metric_name][chain_name] = {}
+        for stage in ["Malignant", "Premalignant"]:
+            df_metric = filter_stage_chain(
+                df_all[df_all["metric_name"] == metric_name],
+                chain_name,
+                stage,
+            )
+            eu_group = "D" if stage == "Malignant" else "A"
+            ko_group = "F" if stage == "Malignant" else "C"
+            igm_pos, igm_neg, eu, eutet2 = get_panel_data(df_metric, eu_group, ko_group)
+            shared_ylim = get_shared_ylim([igm_pos, igm_neg, eu, eutet2])
+            metric_payload[metric_name][chain_name][stage] = {
+                "x": [
+                    igm_pos["sample"].tolist(),
+                    igm_neg["sample"].tolist(),
+                    eu["sample"].tolist(),
+                    eutet2["sample"].tolist(),
+                ],
+                "y": [
+                    igm_pos["metric"].tolist(),
+                    igm_neg["metric"].tolist(),
+                    eu["metric"].tolist(),
+                    eutet2["metric"].tolist(),
+                ],
+                "colors": [
+                    [igm_colors["IgM+"]] * len(igm_pos),
+                    [igm_colors["IgM-"]] * len(igm_neg),
+                    eu["igm_status"].map(igm_colors).fillna("#000000").tolist(),
+                    eutet2["igm_status"].map(igm_colors).fillna("#000000").tolist(),
+                ],
+                "ylim": shared_ylim,
+            }
 
 post_script = f"""
 var plot = document.getElementById('mixcr-plot');
@@ -430,18 +450,20 @@ function addSelect(labelText, options, defaultValue) {{
 
 var metricOptions = {json.dumps(metric_keys)};
 var chainOptions = {json.dumps(["IGH", "IGK", "IGL"])};
+var stageOptions = ['Malignant', 'Premalignant'];
 var metricSelect = addSelect('Metric', metricOptions, {json.dumps(metric_to_plot)});
 var chainSelect = addSelect('Chain', chainOptions, {json.dumps(default_chain)});
+var stageSelect = addSelect('Stage', stageOptions, {json.dumps(default_stage)});
 plot.parentNode.insertBefore(controls, plot);
 
 var metricData = {json.dumps(metric_payload)};
 function updatePlot() {{
   var metric = metricSelect.value;
   var chain = chainSelect.value;
-  var payload = metricData[metric][chain];
-  Plotly.restyle(plot, {{x: payload.x, y: payload.y}});
+  var stage = stageSelect.value;
+  var payload = metricData[metric][chain][stage];
+  Plotly.restyle(plot, {{x: payload.x, y: payload.y, 'marker.color': payload.colors}});
   Plotly.relayout(plot, {{
-    title: metric + ' (Malignant ' + chain + ')',
     'yaxis.range': payload.ylim,
     'yaxis.autorange': false,
     'yaxis2.range': payload.ylim,
@@ -459,6 +481,7 @@ function updatePlot() {{
 
 metricSelect.addEventListener('change', updatePlot);
 chainSelect.addEventListener('change', updatePlot);
+stageSelect.addEventListener('change', updatePlot);
 """
 
 output_path = FIGURES_DIR / "alpha_diversity_interactive.html"
