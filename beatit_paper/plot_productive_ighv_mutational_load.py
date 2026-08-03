@@ -23,7 +23,7 @@ COLORS = {"EµMyc": "#4C78A8", "EµMyc/Tet2KO": "#E45756"}
 MIN_BASES, MIN_READS = 150, 10
 
 
-def load_sample(sample, genotype):
+def load_sample(sample, genotype, min_bases=MIN_BASES, min_reads=MIN_READS):
     """Calculate per-clone and per-sample IGHV metrics."""
     path = ROOT / "mutational_load" / sample / f"{sample}_productive_IGHV_regions.tsv"
     ref_path = ROOT / "IGH_productive" / f"{sample}_productive_IGH.tsv"
@@ -53,8 +53,8 @@ def load_sample(sample, genotype):
     clones["covered_regions"] = lengths.notna().set_axis(REGIONS, axis=1).apply(
         lambda row: "+".join(row.index[row]), axis=1
     )
-    clones["eligible"] = (clones.covered_ighv_bases >= MIN_BASES) & (
-        clones.readCount >= MIN_READS
+    clones["eligible"] = (clones.covered_ighv_bases >= min_bases) & (
+        clones.readCount >= min_reads
     )
     clones["ighv_mutation_load_percent"] = np.where(
         clones.eligible,

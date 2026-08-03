@@ -2,6 +2,7 @@
 /beatit_paper/mutational_load/**/*.clna
 /beatit_paper/mutational_load/**/*.clns
 /beatit_paper/mutational_load/**/*_productive_IGHV_regions.tsv
+__pycache__/
 /beatit_paper/mutational_load/**/*_productive_IGHV_contigs.tsv
 /beatit_paper/mutational_load/**/*_assemble_clna_report.txt
 /beatit_paper/mutational_load/**/*_assemble_contigs_report.txt
