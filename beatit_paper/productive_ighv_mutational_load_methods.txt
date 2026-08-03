@@ -1,0 +1,23 @@
+Productive IgH V-region mutation-load analysis
+
+- Source: MiXCR 4.7.0 mouse (mmu) RNA-seq .vdjca alignments.
+- CDR3-defined clones were reassembled with retained alignments (.clna), then
+  extended with mixcr assembleContigs --assemble-longest-contigs.
+- Only productive IGH clones exported by --export-productive-clones-only were
+  analyzed. Their nucleotide CDR3 sets and readCounts were validated against
+  beatit_paper/IGH_productive.
+- Substitutions relative to the best assigned built-in mouse germline IGHV gene
+  were counted by MiXCR separately in FR1, CDR1, FR2, CDR2, and FR3.
+- The junctional CDR3 region was excluded completely.
+- Only completely covered named regions contributed. Eligible clonotypes had
+  at least 150 covered IGHV nucleotides across those regions and
+  at least 2 supporting reads.
+- Primary sample metric: arithmetic mean of per-clonotype mutation percentages,
+  with every eligible clonotype weighted equally (clone-weighted mean).
+- The summary also reports clone-weighted median, covered-base-pooled, and
+  readCount-weighted sensitivity metrics.
+- No UMIs were available. Contig consensus and the >=2-read filter reduce but do
+  not eliminate sequencing/PCR-error effects.
+- Strain-specific germline alleles were not inferred with findAlleles. Apparent
+  mutation load can therefore include strain/allelic differences from MiXCR's
+  built-in mmu reference and should be interpreted as an upper-bound estimate.

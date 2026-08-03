@@ -31,6 +31,7 @@ COLORS = {
 METRICS = {
     "top1_frequency_percent": "Most dominant clone",
     "top5_frequency_percent": "Cumulative top 5 clones",
+    "inverse_berger_parker": "Inverse Berger–Parker diversity",
 }
 
 
@@ -71,6 +72,10 @@ def load_dominance_data() -> pd.DataFrame:
                     "productive_igh_reads": int(total_reads),
                     "top1_frequency_percent": 100.0 * read_counts.iloc[0] / total_reads,
                     "top5_frequency_percent": 100.0 * read_counts.iloc[:5].sum() / total_reads,
+                    # Classical Berger–Parker dominance d equals the top-1
+                    # frequency. Its reciprocal 1/d is shown as a nonredundant
+                    # diversity metric in the third panel.
+                    "inverse_berger_parker": total_reads / read_counts.iloc[0],
                 }
             )
 
@@ -84,10 +89,12 @@ def exact_mann_whitney(summary: pd.DataFrame, metric: str):
     return mannwhitneyu(emyc, tet2ko, alternative="two-sided", method="exact")
 
 
-def add_significance_bar(ax: plt.Axes, p_value: float, observed_max: float) -> None:
+def add_significance_bar(
+    ax: plt.Axes, p_value: float, observed_max: float, y_upper: float
+) -> None:
     """Draw a comparison bracket above the observed samples."""
-    bracket_bottom = min(observed_max + 5.0, 96.0)
-    bracket_top = bracket_bottom + 3.0
+    bracket_bottom = observed_max + 0.06 * y_upper
+    bracket_top = bracket_bottom + 0.03 * y_upper
     ax.plot(
         [0, 0, 1, 1],
         [bracket_bottom, bracket_top, bracket_top, bracket_bottom],
@@ -97,7 +104,7 @@ def add_significance_bar(ax: plt.Axes, p_value: float, observed_max: float) -> N
     )
     ax.text(
         0.5,
-        bracket_top + 1.0,
+        bracket_top + 0.01 * y_upper,
         f"Exact Mann–Whitney $p$ = {p_value:.4f}",
         ha="center",
         va="bottom",
@@ -109,7 +116,7 @@ def plot_dominance(summary: pd.DataFrame, tests: dict) -> plt.Figure:
     """Create the two-panel Seaborn dominance figure."""
     sns.set_theme(style="whitegrid", context="paper", font_scale=1.2)
     order = list(GROUPS)
-    fig, axes = plt.subplots(1, 2, figsize=(9.2, 5.3), sharey=True)
+    fig, axes = plt.subplots(1, 3, figsize=(13.2, 5.3), sharey=False)
 
     for panel_index, (ax, (metric, title)) in enumerate(zip(axes, METRICS.items())):
         sns.boxplot(
@@ -146,9 +153,11 @@ def plot_dominance(summary: pd.DataFrame, tests: dict) -> plt.Figure:
             zorder=3,
         )
 
-        add_significance_bar(ax, tests[metric].pvalue, float(summary[metric].max()))
+        observed_max = float(summary[metric].max())
+        y_upper = 112.0 if metric != "inverse_berger_parker" else observed_max * 1.30
+        add_significance_bar(ax, tests[metric].pvalue, observed_max, y_upper)
         ax.set_xlim(-0.42, 1.42)
-        ax.set_ylim(0, 112)
+        ax.set_ylim(0, y_upper)
         ax.set_xticks([0, 1])
         ax.set_xticklabels(
             [
@@ -158,7 +167,12 @@ def plot_dominance(summary: pd.DataFrame, tests: dict) -> plt.Figure:
         )
         ax.set_title(title, pad=10)
         ax.set_xlabel("")
-        ax.set_ylabel("Productive IgH reads (%)" if panel_index == 0 else "")
+        if panel_index == 0:
+            ax.set_ylabel("Clone frequency among productive IgH reads (%)")
+        elif metric == "inverse_berger_parker":
+            ax.set_ylabel("Inverse dominance (1/$d$)")
+        else:
+            ax.set_ylabel("")
         ax.grid(axis="y", color="#D9D9D9", linewidth=0.7, alpha=0.8)
         ax.set_axisbelow(True)
         ax.spines["top"].set_visible(False)

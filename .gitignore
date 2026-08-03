@@ -1,0 +1,8 @@
+# Regenerable MiXCR intermediates from the IGHV mutational-load pipeline
+/beatit_paper/mutational_load/**/*.clna
+/beatit_paper/mutational_load/**/*.clns
+/beatit_paper/mutational_load/**/*_productive_IGHV_regions.tsv
+/beatit_paper/mutational_load/**/*_productive_IGHV_contigs.tsv
+/beatit_paper/mutational_load/**/*_assemble_clna_report.txt
+/beatit_paper/mutational_load/**/*_assemble_contigs_report.txt
+/beatit_paper/mutational_load/productive_ighv_mutational_load_per_clone.tsv.gz
