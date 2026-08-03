@@ -20,7 +20,7 @@ GROUPS = {
     "EµMyc/Tet2KO": ["C1", "C5", "C7", "C9", "C11"],
 }
 COLORS = {"EµMyc": "#4C78A8", "EµMyc/Tet2KO": "#E45756"}
-MIN_BASES, MIN_READS = 150, 2
+MIN_BASES, MIN_READS = 150, 10
 
 
 def load_sample(sample, genotype):
