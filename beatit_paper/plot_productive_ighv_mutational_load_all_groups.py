@@ -28,29 +28,37 @@ CLASS_ORDER = [
 
 
 def sample_class(stage):
-    stage = stage.replace("tumor", "Malignant").replace("premalignant", "Premalignant")
-    return stage
+    disease_stage, cell_fraction = stage.split(maxsplit=1)
+    disease_stage = {
+        "tumor": "Malignant",
+        "malignant": "Malignant",
+        "premalignant": "Premalignant",
+    }[disease_stage]
+    return f"{disease_stage} {cell_fraction}"
 
 
 def summarize_all():
     metadata = pd.read_csv(META, sep="\t")
     records = []
-    for row in metadata.itertuples(index=False):
+    for _, row in metadata.iterrows():
+        sample, genotype = row["Sample ID"], row["Genotype"]
         try:
             # No minimum read or coverage-length cutoff. A positive covered
             # length is mathematically required to calculate a mutation rate.
-            _, record = load_sample(row[0], row[1], min_bases=1, min_reads=0)
+            _, record = load_sample(sample, genotype, min_bases=1, min_reads=0)
         except ValueError as error:
             if "No eligible IGHV clonotypes" not in str(error):
                 raise
             record = {
-                "sample": row[0],
-                "genotype": row[1],
+                "sample": sample,
+                "genotype": genotype,
                 "eligible_ighv_clonotypes": 0,
                 "clone_weighted_mean_mutation_load_percent": np.nan,
                 "clone_weighted_mean_germline_identity_percent": np.nan,
             }
-        record["sample_class"] = sample_class(row[2])
+        record["sample_class"] = sample_class(
+            f'{row["Stage"]} {row["Cell fraction"]}'
+        )
         records.append(record)
     return pd.DataFrame(records)
 

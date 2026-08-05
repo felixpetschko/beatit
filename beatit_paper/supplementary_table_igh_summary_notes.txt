@@ -8,7 +8,7 @@ Supplementary IgH summary: calculation notes
   clonotypes only: productive clone readCount / all productive IgH readCount.
 - MiXCR readCount measures bulk RNA-seq read/transcript support. There were no
   UMIs, so these frequencies are not direct B-cell frequencies.
-- Low IgH support is flagged at <1,000 total IgH reads. This
-  is a pragmatic, data-driven reporting cutoff, not a universal biological
-  threshold. All IgM-negative tumors are marked exploratory even when their
-  IgH read count exceeds this cutoff.
+- Confidence has two levels based on total IgH read support: "robust IgH
+  signal" for >= 1,000 reads and "low IgH reads (<1000)"
+  below this threshold. This is a pragmatic reporting cutoff, not a universal
+  biological threshold.
