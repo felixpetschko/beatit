@@ -87,28 +87,17 @@ def make_plot(data):
         ax.set_ylabel(f"Clone-weighted {title} (%)")
         ax.tick_params(axis="x", rotation=20)
         ax.spines[["top", "right"]].set_visible(False)
-        if panel_no == 0:
-            ax.legend(title="Genotype", frameon=False, loc="upper right")
-        else:
-            ax.get_legend().remove()
+        ax.get_legend().remove()
 
-    counts = (
-        data.dropna(subset=["clone_weighted_mean_mutation_load_percent"])
-        .groupby(["sample_class", "genotype"], observed=True).size()
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(
+        handles[:2], labels[:2], title="Genotype", loc="upper center",
+        bbox_to_anchor=(0.5, 0.905), ncol=2, frameon=False,
+        columnspacing=1.5, handletextpad=0.5,
     )
-    count_text = "; ".join(
-        f"{group}: {counts.get((group, 'EµMyc'), 0)}/{counts.get((group, 'EµMyc/Tet2KO'), 0)}"
-        for group in CLASS_ORDER
-    )
+
     fig.suptitle("Productive IgH V-region maturation state across all sample classes", y=0.98)
-    fig.text(
-        0.5, 0.025,
-        "FR1–FR3 and CDR1/CDR2; CDR3 excluded; no minimum read or coverage-length cutoff\n"
-        "Clonotypes with 0 covered IGHV nt excluded; "
-        "Plotted samples (EµMyc/EµMyc-Tet2KO): " + count_text,
-        ha="center", fontsize=8, color="#444444",
-    )
-    fig.subplots_adjust(bottom=0.25, top=0.85, left=0.07, right=0.98, wspace=0.28)
+    fig.subplots_adjust(bottom=0.18, top=0.80, left=0.07, right=0.98, wspace=0.28)
     return fig
 
 
