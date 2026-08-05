@@ -56,9 +56,7 @@ def summarize_all():
                 "clone_weighted_mean_mutation_load_percent": np.nan,
                 "clone_weighted_mean_germline_identity_percent": np.nan,
             }
-        record["sample_class"] = sample_class(
-            f'{row["Stage"]} {row["Cell fraction"]}'
-        )
+        record["sample_class"] = sample_class(row["Cell fraction / stage"])
         records.append(record)
     return pd.DataFrame(records)
 

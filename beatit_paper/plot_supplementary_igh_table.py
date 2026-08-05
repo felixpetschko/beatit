@@ -20,17 +20,16 @@ OUTPUT_PATH = OUTPUT_DIR / "supplementary_table_igh_summary.png"
 DISPLAY_HEADERS = [
     "Sample\nID",
     "Genotype",
-    "Stage",
-    "Cell\nfraction",
+    "Cell fraction /\nstage",
     "Total IgH\nreads",
     "Productive IgH\nclonotypes",
     "Dominant clone\nfrequency (%)",
     "Top 5 clone\nfrequency (%)",
-    "Confidence",
+    "Comment",
 ]
 
 # Relative widths optimized for the long stage and comment fields.
-COLUMN_WIDTHS = [0.055, 0.110, 0.110, 0.095, 0.095, 0.120, 0.130, 0.125, 0.160]
+COLUMN_WIDTHS = [0.055, 0.105, 0.150, 0.090, 0.110, 0.120, 0.110, 0.260]
 
 
 def display_rows(summary: pd.DataFrame) -> list[list[str]]:
@@ -41,13 +40,12 @@ def display_rows(summary: pd.DataFrame) -> list[list[str]]:
             [
                 str(row["Sample ID"]),
                 str(row["Genotype"]),
-                str(row["Stage"]),
-                str(row["Cell fraction"]),
+                str(row["Cell fraction / stage"]),
                 f'{int(row["Total IgH reads"]):,}',
                 f'{int(row["Productive IgH clonotypes"]):,}',
                 f'{float(row["Dominant clone frequency (%)"]):.2f}',
                 f'{float(row["Top 5 clone frequency (%)"]):.2f}',
-                textwrap.fill(str(row["Confidence"]), width=47),
+                textwrap.fill(str(row["Comment"]), width=38),
             ]
         )
     return rows
@@ -55,7 +53,7 @@ def display_rows(summary: pd.DataFrame) -> list[list[str]]:
 
 def row_color(row: pd.Series, row_index: int) -> str:
     """Highlight only IgM-negative samples with low total IgH reads."""
-    if row["Cell fraction"] == "IgM⁻" and int(row["Total IgH reads"]) < 1_000:
+    if "IgM⁻" in row["Cell fraction / stage"] and int(row["Total IgH reads"]) < 1_000:
         return "#FCE8E6"
     return "#FFFFFF" if row_index % 2 == 0 else "#F4F6F8"
 
@@ -72,7 +70,7 @@ def main() -> None:
     fig, ax = plt.subplots(figsize=(26, 31))
     ax.axis("off")
     ax.set_title(
-        "Supplementary Table: Productive IgH repertoire summary",
+        "Productive IgH repertoire summary",
         fontsize=32,
         fontweight="bold",
         pad=18,
@@ -106,7 +104,7 @@ def main() -> None:
             cell.set_height(0.0215)
             if column_index in (0, 1):
                 cell.set_text_props(weight="bold")
-            if column_index in (2, 8):
+            if column_index in (2, 7):
                 cell.get_text().set_ha("left")
 
     fig.savefig(OUTPUT_PATH, dpi=300, bbox_inches="tight", facecolor="white")

@@ -55,8 +55,8 @@ def natural_sample_key(sample: str) -> tuple[int, int]:
     return series_order[sample[0]], int(sample[1:])
 
 
-def confidence_for(total_igh_reads: int) -> str:
-    """Assign one of two confidence labels from total IgH read support."""
+def comment_for(total_igh_reads: int) -> str:
+    """Assign one of two comments based only on total IgH read support."""
     if total_igh_reads < LOW_IGH_READ_THRESHOLD:
         return "low IgH reads (<1000)"
     return "robust IgH signal"
@@ -99,15 +99,10 @@ def load_sample(sample: str, genotype: str, stage: str) -> dict:
     if total_productive_reads <= 0:
         raise ValueError(f"No productive IgH reads in {productive_path.name}")
 
-    disease_stage, cell_fraction = stage.split(maxsplit=1)
-    disease_stage = "malignant" if disease_stage == "tumor" else disease_stage
-    cell_fraction = cell_fraction.replace("IgM+", "IgM⁺").replace("IgM-", "IgM⁻")
-
     return {
         "Sample ID": sample,
         "Genotype": genotype,
-        "Stage": disease_stage,
-        "Cell fraction": cell_fraction,
+        "Cell fraction / stage": stage.replace("IgM+", "IgM⁺").replace("IgM-", "IgM⁻"),
         "Total IgH reads": total_igh_reads,
         "Productive IgH clonotypes": int(len(productive)),
         "Dominant clone frequency (%)": (
@@ -116,7 +111,7 @@ def load_sample(sample: str, genotype: str, stage: str) -> dict:
         "Top 5 clone frequency (%)": (
             100.0 * productive_read_counts.iloc[:5].sum() / total_productive_reads
         ),
-        "Confidence": confidence_for(total_igh_reads),
+        "Comment": comment_for(total_igh_reads),
     }
 
 
@@ -151,7 +146,7 @@ def main() -> None:
   clonotypes only: productive clone readCount / all productive IgH readCount.
 - MiXCR readCount measures bulk RNA-seq read/transcript support. There were no
   UMIs, so these frequencies are not direct B-cell frequencies.
-- Confidence has two levels based on total IgH read support: "robust IgH
+- Comment has two levels based only on total IgH read support: "robust IgH
   signal" for >= {LOW_IGH_READ_THRESHOLD:,} reads and "low IgH reads (<1000)"
   below this threshold. This is a pragmatic reporting cutoff, not a universal
   biological threshold.
