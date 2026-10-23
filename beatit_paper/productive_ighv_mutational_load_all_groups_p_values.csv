@@ -1,0 +1,6 @@
+Sample class,EµMyc n,EµMyc/Tet2KO n,Mann-Whitney U,Exact two-sided p value
+Premalignant IgM⁺,6,5,10.0,0.428571
+Premalignant IgM⁻,6,5,23.0,0.177489
+Malignant IgM⁺,3,4,5.0,0.857143
+Malignant IgM⁻,5,4,8.0,0.730159
+Malignant mixed,1,3,2.0,1.000000
