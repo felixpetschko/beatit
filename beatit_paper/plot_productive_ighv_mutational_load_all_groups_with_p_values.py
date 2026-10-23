@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from matplotlib.transforms import blended_transform_factory
 from scipy.stats import mannwhitneyu
 
 from plot_productive_ighv_mutational_load import COLORS
@@ -40,37 +41,27 @@ def exact_tests(data, metric):
 
 
 def add_p_values(ax, data, metric, tests):
-    """Add one compact genotype-comparison bracket per sample class."""
-    values = data[metric].dropna()
-    span = values.max() - values.min()
-    bracket_height = 0.025 * span
-    offset = 0.045 * span
-    text_offset = 0.012 * span
-    highest = values.max()
-
+    """Add brackets above the axes without changing the data-axis limits."""
+    transform = blended_transform_factory(ax.transData, ax.transAxes)
     for x, sample_class in enumerate(CLASS_ORDER):
-        local = data.loc[data["sample_class"] == sample_class, metric].dropna()
-        bottom = local.max() + offset
-        top = bottom + bracket_height
         ax.plot(
             [x - 0.20, x - 0.20, x + 0.20, x + 0.20],
-            [bottom, top, top, bottom],
+            [1.015, 1.035, 1.035, 1.015],
             color="black",
             linewidth=0.9,
             clip_on=False,
+            transform=transform,
         )
         ax.text(
             x,
-            top + text_offset,
+            1.045,
             f"$p$ = {tests[sample_class].pvalue:.4f}",
             ha="center",
             va="bottom",
             fontsize=8,
+            transform=transform,
+            clip_on=False,
         )
-        highest = max(highest, top + text_offset + 0.06 * span)
-
-    lower, _ = ax.get_ylim()
-    ax.set_ylim(lower, highest)
 
 
 def make_plot(data):
@@ -112,7 +103,7 @@ def make_plot(data):
             ax=ax,
         )
         add_p_values(ax, data, metric, exact_tests(data, metric))
-        ax.set_title(title, pad=10)
+        ax.set_title(title, pad=48)
         ax.set_xlabel("")
         ax.set_ylabel(f"Clone-weighted {title} (%)")
         ax.tick_params(axis="x", rotation=20)
@@ -125,7 +116,7 @@ def make_plot(data):
         labels[:2],
         title="Genotype",
         loc="upper center",
-        bbox_to_anchor=(0.5, 0.875),
+        bbox_to_anchor=(0.5, 0.855),
         ncol=2,
         frameon=False,
         columnspacing=1.5,
@@ -143,7 +134,7 @@ def make_plot(data):
         va="center",
         fontsize=10,
     )
-    fig.subplots_adjust(bottom=0.18, top=0.76, left=0.07, right=0.98, wspace=0.28)
+    fig.subplots_adjust(bottom=0.18, top=0.70, left=0.07, right=0.98, wspace=0.28)
     return fig
 
 
